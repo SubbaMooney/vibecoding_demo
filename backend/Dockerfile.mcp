@@ -1,0 +1,38 @@
+# MCP Protocol Server Dockerfile
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd --create-home --shell /bin/bash app
+
+WORKDIR /app
+
+# Copy requirements
+COPY requirements/mcp.txt requirements/
+RUN pip install --no-cache-dir -r requirements/mcp.txt
+
+# Copy application code
+COPY . .
+RUN chown -R app:app /app
+
+USER app
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Run MCP server
+CMD ["python", "-m", "app.mcp.server"]

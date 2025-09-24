@@ -1,0 +1,68 @@
+# Accessibility Service requirements
+-r base.txt
+
+# Text-to-speech
+pyttsx3==2.90
+gTTS==2.4.0
+
+# Speech-to-text
+SpeechRecognition==3.10.0
+whisper==1.1.10
+
+# Audio processing
+pyaudio==0.2.11
+pydub==0.25.1
+librosa==0.10.1
+
+# Computer vision for accessibility
+opencv-python==4.8.1.78
+pytesseract==0.3.10
+
+# Screen reader integration
+pyautogui==0.9.54
+pynput==1.7.6
+
+# Braille support
+python-brlapi==0.8.4
+
+# Color analysis
+colorsys2==1.0.1
+colorspacious==1.1.2
+
+# Sonification
+mido==1.3.0
+python-rtmidi==1.5.5
+
+# Gesture recognition
+mediapipe==0.10.7
+
+# Alternative input methods
+evdev==1.6.1
+
+# Voice command processing
+vosk==0.3.45
+
+# WCAG compliance checking
+axe-core-python==4.7.0
+
+# Aria attributes handling
+lxml==4.9.3
+beautifulsoup4==4.12.2
+
+# High contrast support
+cssutils==2.8.0
+
+# Font analysis
+fonttools==4.44.0
+
+# Keyboard navigation
+keyboard==0.13.5
+
+# Focus management
+pygetwindow==0.0.9
+
+# Screen magnification
+pyautogui==0.9.54
+
+# Alternative text generation
+transformers==4.36.0

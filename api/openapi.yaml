@@ -1,0 +1,997 @@
+openapi: 3.0.3
+info:
+  title: MCP RAG Server API
+  description: |
+    Semantic search and document management API with MCP protocol support.
+    Includes privacy-preserving personalization, cross-device sync, and comprehensive accessibility features.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api@mcp-rag.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.mcp-rag.example.com/v1
+    description: Production server
+  - url: https://staging-api.mcp-rag.example.com/v1
+    description: Staging server
+  - url: http://localhost:8000/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Search
+    description: Semantic and hybrid search operations
+  - name: Documents
+    description: Document upload and management
+  - name: Sync
+    description: Cross-device synchronization
+  - name: Personalization
+    description: User preferences and learning
+  - name: MCP
+    description: Model Context Protocol operations
+
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        200:
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      security:
+        - refreshToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        200:
+          description: New access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+
+  /search:
+    post:
+      tags: [Search]
+      summary: Perform semantic search
+      operationId: searchDocuments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        200:
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        429:
+          $ref: '#/components/responses/RateLimited'
+
+  /search/stream:
+    post:
+      tags: [Search]
+      summary: Stream search results
+      operationId: streamSearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        200:
+          description: Streaming search results
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: event-stream
+
+  /documents:
+    get:
+      tags: [Documents]
+      summary: List user documents
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, updated_at, filename, size]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        200:
+          description: Document list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResponse'
+
+    post:
+      tags: [Documents]
+      summary: Upload document
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Document file (PDF, DOCX, MD)
+                metadata:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    author:
+                      type: string
+                    tags:
+                      type: array
+                      items:
+                        type: string
+      responses:
+        201:
+          description: Document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        413:
+          $ref: '#/components/responses/PayloadTooLarge'
+
+  /documents/{document_id}:
+    get:
+      tags: [Documents]
+      summary: Get document details
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Documents]
+      summary: Delete document
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Document deleted
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{document_id}/chunks:
+    get:
+      tags: [Documents]
+      summary: Get document chunks
+      parameters:
+        - name: document_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: chunk_type
+          in: query
+          schema:
+            type: string
+            enum: [text, code, table, list]
+      responses:
+        200:
+          description: Document chunks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkListResponse'
+
+  /sync/state:
+    get:
+      tags: [Sync]
+      summary: Get sync state
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Sync state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncState'
+
+    post:
+      tags: [Sync]
+      summary: Update sync state
+      parameters:
+        - name: device_id
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncUpdate'
+      responses:
+        200:
+          description: Sync state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        409:
+          description: Sync conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncConflict'
+
+  /personalization/preferences:
+    get:
+      tags: [Personalization]
+      summary: Get user preferences
+      responses:
+        200:
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+
+    put:
+      tags: [Personalization]
+      summary: Update user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        200:
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+
+  /personalization/consent:
+    get:
+      tags: [Personalization]
+      summary: Get privacy consent settings
+      responses:
+        200:
+          description: Consent settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentSettings'
+
+    put:
+      tags: [Personalization]
+      summary: Update privacy consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentSettings'
+      responses:
+        200:
+          description: Consent updated
+
+  /mcp/tools:
+    get:
+      tags: [MCP]
+      summary: List available MCP tools
+      responses:
+        200:
+          description: MCP tools list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPToolsList'
+
+  /mcp/execute:
+    post:
+      tags: [MCP]
+      summary: Execute MCP tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MCPExecuteRequest'
+      responses:
+        200:
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MCPExecuteResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        501:
+          description: Tool not implemented
+
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        200:
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /metrics:
+    get:
+      tags: [System]
+      summary: Prometheus metrics
+      security: []
+      produces:
+        - text/plain
+      responses:
+        200:
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    refreshToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        device_id:
+          type: string
+          description: Device identifier for sync
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+        user:
+          $ref: '#/components/schemas/User'
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        preferences:
+          $ref: '#/components/schemas/UserPreferences'
+
+    UserPreferences:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum: [light, dark, auto]
+        language:
+          type: string
+        interface_density:
+          type: string
+          enum: [compact, normal, comfortable]
+        accessibility:
+          type: object
+          properties:
+            high_contrast:
+              type: boolean
+            reduce_motion:
+              type: boolean
+            screen_reader_mode:
+              type: boolean
+            font_size:
+              type: string
+              enum: [small, medium, large, extra-large]
+
+    ConsentSettings:
+      type: object
+      properties:
+        analytics:
+          type: boolean
+        personalization:
+          type: boolean
+        data_sharing:
+          type: boolean
+        marketing:
+          type: boolean
+        retention_period:
+          type: integer
+          description: Days to retain data
+        gdpr_consent:
+          type: boolean
+        consent_timestamp:
+          type: string
+          format: date-time
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        filters:
+          type: object
+          properties:
+            document_types:
+              type: array
+              items:
+                type: string
+                enum: [pdf, docx, md]
+            date_range:
+              type: object
+              properties:
+                start:
+                  type: string
+                  format: date
+                end:
+                  type: string
+                  format: date
+            authors:
+              type: array
+              items:
+                type: string
+            tags:
+              type: array
+              items:
+                type: string
+        search_type:
+          type: string
+          enum: [semantic, keyword, hybrid]
+          default: hybrid
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+        threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+
+    SearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+        total:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        facets:
+          type: object
+          properties:
+            document_types:
+              type: object
+              additionalProperties:
+                type: integer
+            authors:
+              type: object
+              additionalProperties:
+                type: integer
+        search_time_ms:
+          type: number
+
+    SearchResult:
+      type: object
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        chunk_id:
+          type: string
+        title:
+          type: string
+        snippet:
+          type: string
+          description: Text snippet with highlights
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        page_number:
+          type: integer
+        metadata:
+          type: object
+        highlights:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              matches:
+                type: array
+                items:
+                  type: string
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        file_size:
+          type: integer
+        doc_type:
+          type: string
+          enum: [pdf, docx, md]
+        processing_status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/Document'
+        - type: object
+          properties:
+            metadata:
+              type: object
+              properties:
+                title:
+                  type: string
+                author:
+                  type: string
+                page_count:
+                  type: integer
+                word_count:
+                  type: integer
+                tags:
+                  type: array
+                  items:
+                    type: string
+            chunks_count:
+              type: integer
+            processing_details:
+              type: object
+              properties:
+                extraction_time_ms:
+                  type: number
+                chunking_time_ms:
+                  type: number
+                embedding_time_ms:
+                  type: number
+                errors:
+                  type: array
+                  items:
+                    type: string
+
+    DocumentListResponse:
+      type: object
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ChunkListResponse:
+      type: object
+      properties:
+        chunks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chunk'
+        total:
+          type: integer
+
+    Chunk:
+      type: object
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        chunk_type:
+          type: string
+          enum: [text, code, table, list]
+        page_number:
+          type: integer
+        position:
+          type: object
+          properties:
+            start:
+              type: integer
+            end:
+              type: integer
+        metadata:
+          type: object
+
+    SyncState:
+      type: object
+      properties:
+        device_id:
+          type: string
+        vector_clock:
+          type: object
+          additionalProperties:
+            type: integer
+        last_sync:
+          type: string
+          format: date-time
+        pending_changes:
+          type: integer
+
+    SyncUpdate:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            type: object
+            properties:
+              operation:
+                type: string
+                enum: [create, update, delete]
+              entity_type:
+                type: string
+              entity_id:
+                type: string
+              data:
+                type: object
+              timestamp:
+                type: string
+                format: date-time
+        vector_clock:
+          type: object
+          additionalProperties:
+            type: integer
+
+    SyncResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+        remote_changes:
+          type: array
+          items:
+            type: object
+        new_vector_clock:
+          type: object
+          additionalProperties:
+            type: integer
+
+    SyncConflict:
+      type: object
+      properties:
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              local_value:
+                type: object
+              remote_value:
+                type: object
+              suggested_resolution:
+                type: string
+                enum: [use_local, use_remote, merge]
+
+    MCPToolsList:
+      type: object
+      properties:
+        tools:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              version:
+                type: string
+              parameters:
+                type: object
+
+    MCPExecuteRequest:
+      type: object
+      required: [tool, parameters]
+      properties:
+        tool:
+          type: string
+        version:
+          type: string
+        parameters:
+          type: object
+
+    MCPExecuteResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+        result:
+          type: object
+        execution_time_ms:
+          type: number
+        usage:
+          type: object
+          properties:
+            tokens:
+              type: integer
+            embeddings_generated:
+              type: integer
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        components:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/ComponentHealth'
+            vector_db:
+              $ref: '#/components/schemas/ComponentHealth'
+            redis:
+              $ref: '#/components/schemas/ComponentHealth'
+            mcp:
+              $ref: '#/components/schemas/ComponentHealth'
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [up, down, degraded]
+        latency_ms:
+          type: number
+        error:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        request_id:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    RateLimited:
+      description: Rate limited
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    PayloadTooLarge:
+      description: Payload too large
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+webhooks:
+  documentProcessed:
+    post:
+      requestBody:
+        description: Document processing completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                  const: document.processed
+                document_id:
+                  type: string
+                status:
+                  type: string
+                  enum: [completed, failed]
+                timestamp:
+                  type: string
+                  format: date-time

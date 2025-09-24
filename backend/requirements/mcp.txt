@@ -1,0 +1,31 @@
+# MCP Protocol Server requirements
+-r base.txt
+
+# MCP SDK (placeholder - actual package when available)
+# mcp-sdk==1.0.0
+
+# JSON-RPC for MCP protocol
+jsonrpcserver==5.0.9
+jsonrpcclient==4.0.3
+
+# WebSocket support for MCP
+websockets==12.0
+
+# Protocol buffers (if needed for MCP)
+protobuf==4.25.0
+
+# gRPC support
+grpcio==1.59.3
+grpcio-tools==1.59.3
+
+# Circuit breaker pattern
+pybreaker==1.0.1
+
+# Version management
+packaging==23.2
+
+# Schema validation
+cerberus==1.3.5
+
+# Retry mechanisms
+backoff==2.2.1

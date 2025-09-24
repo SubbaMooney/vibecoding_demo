@@ -1,0 +1,63 @@
+# Development requirements
+-r api.txt
+-r mcp.txt
+-r rag.txt
+-r sync.txt
+-r accessibility.txt
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-xdist==3.5.0
+httpx==0.25.2
+factory-boy==3.3.0
+faker==20.1.0
+
+# Code quality
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+pylint==3.0.3
+bandit==1.7.5
+safety==2.3.5
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==1.3.0
+sphinx-autodoc-typehints==1.25.2
+
+# Pre-commit hooks
+pre-commit==3.6.0
+
+# Development tools
+ipython==8.17.2
+jupyter==1.0.0
+notebook==7.0.6
+
+# Database tools
+alembic==1.12.1
+
+# Debugging
+debugpy==1.8.0
+icecream==2.1.3
+
+# Performance profiling
+line-profiler==4.1.1
+memory-profiler==0.61.0
+py-spy==0.3.14
+
+# Load testing
+locust==2.17.0
+
+# API testing
+tavern==2.4.1
+
+# Mock external services
+responses==0.24.1
+requests-mock==1.11.0
+
+# Environment management
+python-dotenv==1.0.0

@@ -1,0 +1,240 @@
+# Alerting rules for MCP RAG Server
+groups:
+  - name: mcp-rag-alerts
+    rules:
+      # API Gateway alerts
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="api-gateway"}[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency detected"
+          description: "API Gateway P95 latency is {{ $value }}s"
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{job="api-gateway",status=~"5.."}[5m])) / sum(rate(http_requests_total{job="api-gateway"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+
+      # MCP Protocol alerts
+      - alert: MCPProtocolErrors
+        expr: increase(mcp_protocol_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MCP protocol errors increasing"
+          description: "{{ $value }} MCP protocol errors in the last 5 minutes"
+
+      - alert: MCPVersionMismatch
+        expr: increase(mcp_protocol_version_mismatches_total[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MCP version mismatches detected"
+          description: "{{ $value }} version mismatches in the last 10 minutes"
+
+      # Search performance alerts
+      - alert: SlowSearchQueries
+        expr: histogram_quantile(0.95, sum(rate(rag_search_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Search queries are slow"
+          description: "P95 search latency is {{ $value }}s"
+
+      - alert: LowSearchSuccessRate
+        expr: sum(rate(rag_search_success_total[5m])) / sum(rate(rag_search_total[5m])) < 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low search success rate"
+          description: "Search success rate is {{ $value | humanizePercentage }}"
+
+      # Database alerts
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "{{ $value }} active database connections"
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is unreachable"
+
+      # Redis alerts
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is unreachable"
+
+      - alert: LowCacheHitRate
+        expr: redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low Redis cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+      # Vector database alerts
+      - alert: QdrantDown
+        expr: up{job="qdrant"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Qdrant vector database is down"
+          description: "Qdrant is unreachable"
+
+      - alert: VectorSearchLatency
+        expr: histogram_quantile(0.95, sum(rate(qdrant_search_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High vector search latency"
+          description: "Vector search P95 latency is {{ $value }}s"
+
+      # Document processing alerts
+      - alert: DocumentProcessingBacklog
+        expr: document_processing_queue_depth > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Document processing backlog"
+          description: "{{ $value }} documents queued for processing"
+
+      - alert: HighDocumentProcessingFailures
+        expr: increase(document_processing_failures_total[10m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High document processing failures"
+          description: "{{ $value }} processing failures in the last 10 minutes"
+
+      # System resource alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value | humanizePercentage }} full on {{ $labels.instance }}"
+
+      # Container alerts
+      - alert: ContainerDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container is down"
+          description: "{{ $labels.job }} container is down"
+
+      - alert: ContainerRestarts
+        expr: increase(container_last_seen[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restarting frequently"
+          description: "{{ $labels.name }} container has restarted {{ $value }} times in the last hour"
+
+      # Sync service alerts
+      - alert: SyncConflicts
+        expr: increase(sync_conflicts_total[10m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of sync conflicts"
+          description: "{{ $value }} sync conflicts in the last 10 minutes"
+
+      - alert: SyncLag
+        expr: sync_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High sync lag detected"
+          description: "Sync lag is {{ $value }}s"
+
+      # Accessibility service alerts
+      - alert: AccessibilityServiceDown
+        expr: up{job="accessibility-service"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Accessibility service is down"
+          description: "Accessibility features may be unavailable"
+
+      # User experience alerts
+      - alert: LowOnboardingCompletionRate
+        expr: user_onboarding_completion_rate < 0.8
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low onboarding completion rate"
+          description: "Onboarding completion rate is {{ $value | humanizePercentage }}"
+
+      - alert: HighUserDropOffRate
+        expr: user_session_abandon_rate > 0.3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High user drop-off rate"
+          description: "User drop-off rate is {{ $value | humanizePercentage }}"

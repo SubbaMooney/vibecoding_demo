@@ -60,6 +60,29 @@ class Settings(BaseSettings):
     
     # MCP Protocol settings
     mcp_protocol_version: str = Field(default="1.0", env="MCP_PROTOCOL_VERSION")
+    mcp_max_connections: int = Field(default=100, env="MCP_MAX_CONNECTIONS")
+    mcp_message_timeout: int = Field(default=30, env="MCP_MESSAGE_TIMEOUT")
+    mcp_max_message_size: int = Field(default=10485760, env="MCP_MAX_MESSAGE_SIZE")  # 10MB
+    mcp_enable_websocket: bool = Field(default=True, env="MCP_ENABLE_WEBSOCKET")
+    mcp_websocket_path: str = Field(default="/mcp/ws", env="MCP_WEBSOCKET_PATH")
+
+    # Document processing settings
+    max_file_size: int = Field(default=52428800, env="MAX_FILE_SIZE")  # 50MB
+    allowed_file_types: List[str] = Field(default=["pdf", "docx", "txt", "md"], env="ALLOWED_FILE_TYPES")
+    document_chunk_size: int = Field(default=1000, env="DOCUMENT_CHUNK_SIZE")
+    document_chunk_overlap: int = Field(default=200, env="DOCUMENT_CHUNK_OVERLAP")
+
+    # RAG search settings
+    default_search_limit: int = Field(default=10, env="DEFAULT_SEARCH_LIMIT")
+    max_search_limit: int = Field(default=100, env="MAX_SEARCH_LIMIT")
+    default_similarity_threshold: float = Field(default=0.7, env="DEFAULT_SIMILARITY_THRESHOLD")
+    enable_hybrid_search: bool = Field(default=True, env="ENABLE_HYBRID_SEARCH")
+
+    # Monitoring and logging settings
+    enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
+    metrics_endpoint: str = Field(default="/metrics", env="METRICS_ENDPOINT")
+    log_level: str = Field(default="INFO", env="LOG_LEVEL")
+    enable_debug_tracing: bool = Field(default=False, env="ENABLE_DEBUG_TRACING")
     mcp_server_port: int = 8001
     mcp_timeout_seconds: int = 30
     mcp_retry_attempts: int = 3
